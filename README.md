@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Daily Five
 
-## Getting Started
+A minimalist daily habit tracker for two. Each day you each check off five things:
 
-First, run the development server:
+| Category | Examples |
+| --- | --- |
+| **Physical** | walk, gym, yoga |
+| **Social** | call family, coffee with a friend, work from a café |
+| **Mental** | reading, crossword, meditation |
+| **Home** | tidy the bedroom, organize the closet, vacuum |
+| **Growth** | practice music, learn something, side project |
+
+…and close the day with a journal entry (private unless you share it). Link accounts with your partner to see each other's day live and earn badges together.
+
+**Stack:** Next.js 16 (App Router) · Tailwind v4 · shadcn/ui (Base UI) · Clerk · Convex
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 1. Clerk
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Create an application at [dashboard.clerk.com](https://dashboard.clerk.com).
+2. Copy the publishable and secret keys into `.env.local` (see `.env.local.example`).
+3. In Clerk, open **Integrations → Convex** and activate it. (Alternatively create a JWT template named `convex`.)
+4. Copy your **Frontend API URL** (looks like `https://xxx.clerk.accounts.dev`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> Without keys, Clerk runs in keyless dev mode so you can click around, but Convex won't accept those sessions until step 3 is done.
 
-## Learn More
+### 2. Convex
 
-To learn more about Next.js, take a look at the following resources:
+The project was scaffolded against a local, account-less Convex deployment. To use your own Convex account:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npx convex login
+npx convex dev --configure new
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Then tell Convex which Clerk app to trust:
 
-## Deploy on Vercel
+```bash
+npx convex env set CLERK_JWT_ISSUER_DOMAIN https://xxx.clerk.accounts.dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 3. Run
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+In two terminals:
+
+```bash
+npx convex dev
+npm run dev
+```
+
+Open http://localhost:3000.
+
+## Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Next.js dev server |
+| `npx convex dev` | Convex dev server + codegen (keep it running) |
+| `npm test` | Backend tests (convex-test + Vitest) |
+| `npm run build` | Production build |
+
+## Project layout
+
+```
+app/                    routes: / (landing), /today, /day/[date], /history, /badges, /us
+components/             day view, activity rows, journal, progress ring, app shell
+convex/                 schema + functions (users, couples, days, badges) and tests
+lib/categories.ts       the five categories (shared by UI and backend)
+lib/badges.ts           badge catalog and rules
+lib/dates.ts            local YYYY-MM-DD helpers and streak math
+proxy.ts                Clerk route protection
+```
+
+## Deploying
+
+Deploy the Next.js app to Vercel and set the build command to
+`npx convex deploy --cmd 'npm run build'` with a `CONVEX_DEPLOY_KEY` from the Convex dashboard. Use Clerk production keys and set `CLERK_JWT_ISSUER_DOMAIN` on the production Convex deployment.
