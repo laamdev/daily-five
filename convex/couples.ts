@@ -83,7 +83,10 @@ export const leave = mutation({
   },
 });
 
-/** The partner's day. The journal is only included when they chose to share it. */
+/**
+ * What the partner chose to share for a day. The checklist is only included when they turned on
+ * checklist sharing, and the journal only when they shared that day's entry.
+ */
 export const partnerDay = query({
   args: { date: v.string() },
   handler: async (ctx, { date }) => {
@@ -92,16 +95,32 @@ export const partnerDay = query({
     if (!user) return null;
     const partner = await getPartner(ctx, user);
     if (!partner) return null;
+    const sharesChecklist = partner.shareChecklist ?? false;
     const day = await getDay(ctx, partner._id, date);
     return {
       partner: { _id: partner._id, name: partner.name, imageUrl: partner.imageUrl },
-      day: day
-        ? {
-            activities: day.activities,
-            doneCount: day.doneCount,
-            journal: day.journalShared ? day.journal : null,
-          }
-        : null,
+      sharesChecklist,
+      checklist:
+        sharesChecklist && day ? { activities: day.activities, doneCount: day.doneCount } : null,
+      journal: day?.journalShared ? day.journal : null,
     };
+  },
+});
+
+/** Badges the partner has earned. Always visible to the other member of the space. */
+export const partnerBadges = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return null;
+    const partner = await getPartner(ctx, user);
+    if (!partner) return null;
+    const earned = await ctx.db
+      .query("userBadges")
+      .withIndex("by_user", (q) => q.eq("userId", partner._id))
+      .collect();
+    return earned
+      .sort((a, b) => b.earnedAt - a.earnedAt)
+      .map((b) => ({ badgeId: b.badgeId, earnedAt: b.earnedAt }));
   },
 });

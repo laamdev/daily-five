@@ -1,6 +1,6 @@
-import { ConvexError } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getCurrentUser } from "./model";
+import { getCurrentUser, requireUser } from "./model";
 
 /** Creates or refreshes the user record from the Clerk identity. Called once per session. */
 export const store = mutation({
@@ -36,6 +36,20 @@ export const me = query({
   handler: async (ctx) => {
     const user = await getCurrentUser(ctx);
     if (!user) return null;
-    return { _id: user._id, name: user.name, imageUrl: user.imageUrl, hasCouple: !!user.coupleId };
+    return {
+      _id: user._id,
+      name: user.name,
+      imageUrl: user.imageUrl,
+      hasCouple: !!user.coupleId,
+      shareChecklist: user.shareChecklist ?? false,
+    };
+  },
+});
+
+export const setShareChecklist = mutation({
+  args: { share: v.boolean() },
+  handler: async (ctx, { share }) => {
+    const user = await requireUser(ctx);
+    await ctx.db.patch(user._id, { shareChecklist: share });
   },
 });

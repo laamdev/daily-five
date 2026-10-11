@@ -30,6 +30,8 @@ export default defineSchema({
     name: v.string(),
     imageUrl: v.optional(v.string()),
     coupleId: v.optional(v.id("couples")),
+    // Off unless the user opts in: the partner only sees earned badges by default.
+    shareChecklist: v.optional(v.boolean()),
   }).index("by_token", ["tokenIdentifier"]),
 
   couples: defineTable({

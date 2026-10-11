@@ -6,6 +6,7 @@ import { ConvexError } from "convex/values";
 import { Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
+import { BadgeIcon } from "@/components/badge-icon";
 import { CATEGORY_STYLES } from "@/components/category-dot";
 import { ProgressRing } from "@/components/progress-ring";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { BADGE_BY_ID } from "@/lib/badges";
 import { CATEGORIES, type Activities } from "@/lib/categories";
 import { todayKey } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -70,8 +73,8 @@ function LinkUp() {
         Better <span className="italic">together</span>
       </h1>
       <p className="mt-4 max-w-md text-muted-foreground">
-        Link your account with your partner&apos;s to see each other&apos;s days, cheer each other on
-        and earn badges together.
+        Link your account with your partner&apos;s to see the badges you each earn and unlock a few
+        together. Your checklists and journal stay private unless you choose to share them.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -144,50 +147,93 @@ function WaitingForPartner({ code }: { code: string }) {
 function Together() {
   const today = todayKey();
   const me = useQuery(api.users.me);
-  const mine = useQuery(api.days.get, { date: today });
   const partner = useQuery(api.couples.partnerDay, { date: today });
-  const badges = useQuery(api.badges.list, { today });
+  const partnerBadges = useQuery(api.couples.partnerBadges);
+  const setShareChecklist = useMutation(api.users.setShareChecklist);
 
-  if (!me || mine === undefined || !partner) {
+  if (!me || !partner || partnerBadges === undefined) {
     return <Skeleton className="mt-2 h-80 w-full" />;
   }
 
-  const myDone = mine?.day?.doneCount ?? 0;
-  const theirDone = partner.day?.doneCount ?? 0;
-  const syncStreak = badges?.stats.currentInSyncStreak ?? 0;
+  const name = partner.partner.name;
 
   return (
     <>
       <h1 className="mt-1 font-serif text-5xl leading-none tracking-tight">
-        {me.name} <span className="text-muted-foreground italic">&amp;</span> {partner.partner.name}
+        {me.name} <span className="text-muted-foreground italic">&amp;</span> {name}
       </h1>
       <p className="mt-3 font-serif text-lg text-muted-foreground italic">
-        {myDone + theirDone === 10
-          ? "Both of you did all five today. In sync."
-          : `${myDone + theirDone} of 10 together today.`}
-        {syncStreak > 1 && ` ${syncStreak} in-sync days in a row.`}
+        {partner.sharesChecklist
+          ? `${name} has done ${partner.checklist?.doneCount ?? 0} of 5 today.`
+          : "Your days are your own. Badges are what you share."}
       </p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <PersonCard name="You" imageUrl={me.imageUrl} activities={mine?.day?.activities ?? null} />
-        <PersonCard
-          name={partner.partner.name}
-          imageUrl={partner.partner.imageUrl}
-          activities={partner.day?.activities ?? null}
-        />
-      </div>
-
       <section className="mt-10">
-        <h2 className="font-serif text-3xl">{partner.partner.name}&apos;s journal</h2>
-        {partner.day?.journal ? (
-          <blockquote className="mt-4 border-l-2 border-border pl-5 font-serif text-xl leading-relaxed whitespace-pre-wrap">
-            {partner.day.journal}
-          </blockquote>
+        <h2 className="font-serif text-3xl">{name}&apos;s badges</h2>
+        {partnerBadges && partnerBadges.length > 0 ? (
+          <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
+            {partnerBadges.map((b) => {
+              const badge = BADGE_BY_ID[b.badgeId];
+              if (!badge) return null;
+              return (
+                <li key={b.badgeId} className="flex flex-col items-center rounded-2xl border bg-card p-3 text-center">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <BadgeIcon icon={badge.icon} className="size-5" />
+                  </span>
+                  <p className="mt-2 text-sm leading-tight font-medium">{badge.name}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {new Date(b.earnedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
         ) : (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Nothing shared today. Entries stay private unless they choose to share them.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">No badges yet. The first one comes with the first check.</p>
         )}
+      </section>
+
+      {partner.sharesChecklist && (
+        <section className="mt-10">
+          <h2 className="font-serif text-3xl">{name}&apos;s day</h2>
+          <div className="mt-4">
+            <PersonCard
+              name={name}
+              imageUrl={partner.partner.imageUrl}
+              activities={partner.checklist?.activities ?? null}
+            />
+          </div>
+        </section>
+      )}
+
+      {partner.journal && (
+        <section className="mt-10">
+          <h2 className="font-serif text-3xl">{name}&apos;s journal</h2>
+          <blockquote className="mt-4 border-l-2 border-border pl-5 font-serif text-xl leading-relaxed whitespace-pre-wrap">
+            {partner.journal}
+          </blockquote>
+        </section>
+      )}
+
+      <section className="mt-10 rounded-2xl border p-5">
+        <h2 className="font-medium">Your sharing</h2>
+        <label className="mt-3 flex items-center justify-between gap-4 text-sm">
+          <span>
+            Share my daily checklist
+            <span className="block text-xs text-muted-foreground">
+              {me.shareChecklist
+                ? `${name} can see your activities and progress each day.`
+                : `${name} only sees the badges you earn.`}
+            </span>
+          </span>
+          <Switch
+            checked={me.shareChecklist}
+            onCheckedChange={(checked) => setShareChecklist({ share: checked })}
+          />
+        </label>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Journal entries stay private too. You can share a single day&apos;s entry from the Today page.
+        </p>
       </section>
 
       <LeaveSpace />

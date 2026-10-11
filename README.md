@@ -10,7 +10,7 @@ A minimalist daily habit tracker for two. Each day you each check off five thing
 | **Home** | tidy the bedroom, organize the closet, vacuum |
 | **Growth** | practice music, learn something, side project |
 
-…and close the day with a journal entry (private unless you share it). Link accounts with your partner to see each other's day live and earn badges together.
+…and close the day with a journal entry. Link accounts with your partner to see each other's earned badges and unlock couple badges. Everything else is private by default: each of you can opt in to sharing your daily checklist, and journal entries are shared one day at a time.
 
 **Stack:** Next.js 16 (App Router) · Tailwind v4 · shadcn/ui (Base UI) · Clerk · Convex
 

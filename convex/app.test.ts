@@ -60,7 +60,7 @@ describe("couples", () => {
     expect(couples).toHaveLength(0);
   });
 
-  test("journal stays private until shared", async () => {
+  test("checklist and journal stay private until shared", async () => {
     const { luis, ana } = await setup();
     const code = await luis.mutation(api.couples.create, {});
     await ana.mutation(api.couples.join, { code });
@@ -72,16 +72,33 @@ describe("couples", () => {
       title: "Morning walk",
       description: "Around the park",
     });
+    await ana.mutation(api.days.toggleActivity, { date, category: "physical" });
     await ana.mutation(api.days.saveJournal, { date, journal: "Secret", journalShared: false });
 
+    // Private by default: nothing about the day is visible.
     let view = await luis.query(api.couples.partnerDay, { date });
     expect(view?.partner.name).toBe("Ana");
-    expect(view?.day?.activities.physical.title).toBe("Morning walk");
-    expect(view?.day?.journal).toBeNull();
+    expect(view?.sharesChecklist).toBe(false);
+    expect(view?.checklist).toBeNull();
+    expect(view?.journal).toBeNull();
+
+    // Earned badges are always visible.
+    const badges = await luis.query(api.couples.partnerBadges, {});
+    expect(badges?.map((b) => b.badgeId)).toEqual(["first-step"]);
+
+    await ana.mutation(api.users.setShareChecklist, { share: true });
+    view = await luis.query(api.couples.partnerDay, { date });
+    expect(view?.checklist?.activities.physical.title).toBe("Morning walk");
+    expect(view?.checklist?.doneCount).toBe(1);
+    expect(view?.journal).toBeNull();
 
     await ana.mutation(api.days.saveJournal, { date, journal: "Shared now", journalShared: true });
     view = await luis.query(api.couples.partnerDay, { date });
-    expect(view?.day?.journal).toBe("Shared now");
+    expect(view?.journal).toBe("Shared now");
+
+    await ana.mutation(api.users.setShareChecklist, { share: false });
+    view = await luis.query(api.couples.partnerDay, { date });
+    expect(view?.checklist).toBeNull();
   });
 });
 
