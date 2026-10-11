@@ -1,8 +1,8 @@
-"use client";
+import { TodayView } from "./today-view";
 
-import { DayView } from "@/components/day-view";
-import { todayKey } from "@/lib/dates";
+// Rendered client-side once auth has loaded; opt out of instant-navigation validation.
+export const instant = false;
 
 export default function TodayPage() {
-  return <DayView date={todayKey()} />;
+  return <TodayView />;
 }

@@ -1,28 +1,8 @@
-"use client";
+import { DayPageView } from "./day-view";
 
-import { use } from "react";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { DayView } from "@/components/day-view";
-import { isDateKey, todayKey } from "@/lib/dates";
+// Rendered client-side once auth has loaded; opt out of instant-navigation validation.
+export const instant = false;
 
-export default function DayPage({ params }: { params: Promise<{ date: string }> }) {
-  const { date } = use(params);
-  if (!isDateKey(date)) notFound();
-
-  if (date > todayKey()) {
-    return (
-      <div className="py-16 text-center">
-        <p className="font-serif text-3xl">One day at a time.</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This day hasn&apos;t happened yet.{" "}
-          <Link href="/today" className="underline underline-offset-4">
-            Back to today
-          </Link>
-        </p>
-      </div>
-    );
-  }
-
-  return <DayView date={date} />;
+export default function DayPage({ params }: PageProps<"/day/[date]">) {
+  return <DayPageView params={params} />;
 }
