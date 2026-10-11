@@ -78,5 +78,22 @@ proxy.ts                Clerk route protection
 
 ## Deploying
 
-Deploy the Next.js app to Vercel and set the build command to
-`npx convex deploy --cmd 'npm run build'` with a `CONVEX_DEPLOY_KEY` from the Convex dashboard. Use Clerk production keys and set `CLERK_JWT_ISSUER_DOMAIN` on the production Convex deployment.
+| Piece | Where |
+| --- | --- |
+| Web app | Vercel project `laam-dev/daily-five`, redeploys on every push to `main` |
+| Database (prod) | Convex project `daily-five`, prod deployment `uncommon-platypus-64` |
+| Database (dev) | Convex dev deployment `astute-flamingo-198` (what `npx convex dev` uses) |
+| Auth | Clerk app "Daily Five", development instance (shared by local and prod) |
+
+Vercel only builds the Next.js app. **When you change anything in `convex/`, deploy the backend yourself:**
+
+```bash
+npx convex deploy
+```
+
+Vercel environment variables (Production + Preview): `NEXT_PUBLIC_CONVEX_URL` (prod Convex URL),
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` and the four `NEXT_PUBLIC_CLERK_*_URL` routes.
+
+To move auth to Clerk production later you need your own domain: create the production instance in
+Clerk, add its DNS records, swap the keys in Vercel and set `CLERK_JWT_ISSUER_DOMAIN` on the prod
+Convex deployment (`npx convex env set --prod ...`).
